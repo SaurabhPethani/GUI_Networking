@@ -5,10 +5,11 @@ from tkinter import *
 def send(event):
     global chatText,chatEntry, conn
     msg = chatEntry.get()
-    if msg != '':
-        conn.send(msg.encode('utf-8'))
-        chatText.insert(END, "YOU -> "+msg+"\n")
-        chatEntry.delete(0, END)
+    conn.send(msg.encode('utf-8'))
+    chatText.insert(END, "YOU -> "+msg+"\n")
+    chatEntry.delete(0, END)
+    if msg == 'q':
+        conn.close()
 
 root = Tk()
 root.geometry("300x300")
@@ -33,11 +34,14 @@ class Client(threading.Thread):
 
     def run(self):
         global chatText
+        print("Running Thread")
         msg=''
-        while msg != 'q':
+        while msg != b'q':
             msg = self.client.recv(1024).decode('utf-8')
+            print(type(msg), msg)
             chatText.insert(END, "Server -> "+msg+"\n")
         self.client.close()
+        print("Thread Finished")
 
 conn = socket.socket()
 
@@ -46,5 +50,6 @@ print("Connected Successfully!")
 conn.send("Connected ".encode('utf-8'))
 client = Client(conn)
 client.start()
-
+print("Running main loop")
 root.mainloop()
+print("Main loop finished")

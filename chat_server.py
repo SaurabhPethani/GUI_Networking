@@ -1,13 +1,17 @@
 import socket
 from tkinter import *
 import threading
+import _thread
 
 def send(event):
     global chatEntry,chat, sendButton, connections
     msg=chatEntry.get()
-    for connection in connections:
-        connection.send(msg.encode('utf-8'))
-    chat.insert(END, "YOU - > "+msg+"\n")
+    if msg != 'q'and len(connections) >= 1:
+
+        for connection in connections:
+            connection.send(msg.encode('utf-8'))
+        chat.insert(END, "YOU - > "+msg+"\n")
+
     chatEntry.delete(0, END)
 
 root = Tk()
@@ -27,19 +31,26 @@ sendButton.pack(side="left")
 sendButton.bind("<Button>", send)
 frame.pack(side="top")
 
-class Server:
+class Server(threading.Thread):
     def __init__(self, soc ):
+        threading.Thread.__init__(self)
         self.client= soc    
 
-    def receive(self):
+    def run(self):
         global chat
         msg =''
         while msg != 'q':
             print("Receiving...")
             msg = self.client.recv(1024).decode('utf-8')
-            chat.insert(END, "Client -> " + msg + "\n")
-            for connection in connections:
-                connection.send(msg.encode('utf-8'))
+            if msg != 'q':
+                chat.insert(END, "Client -> " + msg + "\n")
+
+                for connection in connections:
+                    if connection != self.client:
+                        connection.send(msg.encode('utf-8'))
+        print("removing : ",self.client)
+        connections.remove(self.client)
+        print("Closing connection")
         self.client.close()
 
 serverSocket = socket.socket()
@@ -52,9 +63,10 @@ def doConnection():
         soc,addr = serverSocket.accept()
         connections.append(soc)
         client = Server(soc)
-        rec_thread = threading.Thread(target = client.receive)
-        rec_thread.start()
+        client.start()
 
-loop = threading.Thread(target= doConnection)
-loop.start()
+# loop = threading.Thread(target= doConnection)
+# loop.start()
+
+_thread.start_new_thread(doConnection,())
 root.mainloop()
