@@ -3,6 +3,7 @@ from tkinter import *
 import threading
 import _thread
 
+# This function will send message(should not be 'q') typed in Entry field to all clients connected to it 
 def send(event):
     global chatEntry,chat, sendButton, connections
     msg=chatEntry.get()
@@ -14,6 +15,7 @@ def send(event):
 
     chatEntry.delete(0, END)
 
+# GUI code starts here
 root = Tk()
 root.geometry("300x300")
 root.title("Server")
@@ -30,7 +32,9 @@ sendButton = Button(frame, text="Send")
 sendButton.pack(side="left")
 sendButton.bind("<Button>", send)
 frame.pack(side="top")
+# GUI code ends here
 
+# Server class is used to have a Thread continuously seeking to receive message from connected clients 
 class Server(threading.Thread):
     def __init__(self, soc ):
         threading.Thread.__init__(self)
@@ -44,7 +48,6 @@ class Server(threading.Thread):
             msg = self.client.recv(1024).decode('utf-8')
             if msg != 'q':
                 chat.insert(END, "Client -> " + msg + "\n")
-
                 for connection in connections:
                     if connection != self.client:
                         connection.send(msg.encode('utf-8'))
@@ -53,20 +56,19 @@ class Server(threading.Thread):
         print("Closing connection")
         self.client.close()
 
+# Initiate Networking
 serverSocket = socket.socket()
 serverSocket.bind(('localhost', 3690))
 serverSocket.listen(5)
 
-connections = []
+connections = []    # stores objects of all clients connected to it
+
+# doConnection will accept connection from client -> append socket to connections list -> create a thread for that socket-> starts the thread
 def doConnection():
     while True:
         soc,addr = serverSocket.accept()
         connections.append(soc)
         client = Server(soc)
         client.start()
-
-# loop = threading.Thread(target= doConnection)
-# loop.start()
-
-_thread.start_new_thread(doConnection,())
-root.mainloop()
+_thread.start_new_thread(doConnection,())   # Thread is assigned a task to 'doConnection' which will die when main thread will die
+root.mainloop()     # main thread will capture event objects from event queue and send it to respective objects of components
